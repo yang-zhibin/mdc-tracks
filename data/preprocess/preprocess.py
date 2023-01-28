@@ -39,7 +39,7 @@ def allocate_wirePos(wirePos, rawData):
     pt = hits.apply(lambda row: cal_r(row['momx'], row['momy']), axis=1)
     hits.loc[:, 'pt'] = pt
 
-    hits = hits.sort_values(by='event')
+    #hits = hits.sort_values(by='event')
 
     left_cols = ['event', 'gid', 'layer', 'cell', 'x', 'y', 'r', 'phi', 'trackIndex', 'centerX', 'centerY',	'radius','momx','momy','momz', 'chargeParticle', 'flightLength', 'currentTrackPID', 'rawDriftTime', 'creatorProcessturnID', 'isScondary']
 
@@ -47,16 +47,161 @@ def allocate_wirePos(wirePos, rawData):
 
     return hits
 
-def clean_data(hits, args)
+def clean_data(hits, args):
+    data_grouped = hits.groupby('event')
 
-def process_file(data_file, out_dir, wirePos_file, args):
+    problem_count = pd.Series(
+        {'total': 0,'total_hits<10': 0, 'pid_max_part<0.9': 0, 'gap_layer>5': 0, 'min_layer>8': 0, 'cross_layer<8': 0,
+         'creator_noise': 0, 'creator_drop': 0, 'center_drop':0})
+    clean_data = pd.DataFrame(columns=list(hits))
+    problem_data = pd.DataFrame(columns=list(hits))
+    problem_data['problem'] = 0
+
+    for event_id, event in data_grouped:
+        track_grouped = event.groupby('trackIndex')
+        noise_problem = False
+        drop_problem = False
+        event_process = event
+        problem = 'Problem description: \n'
+        for trackId, track in track_grouped:
+            if (trackId == -1):
+                continue
+
+            min_layer = track['layer'].min()
+            if (min_layer > 8):
+                event_process = event_process.drop(event_process[event_process.trackIndex == trackId].index)
+                drop_problem = True
+                problem = problem + 'trackId: ' + str(trackId) + ' ' + 'min_layer>8 ' + '\n'
+                problem_count['min_layer>8'] = problem_count['min_layer>8'] + 1
+                continue
+
+            problem_count['total'] = problem_count['total'] + 1
+            hit_count = track.shape[0]
+            if (hit_count < 10):
+                event_process.loc[(event_process[event_process.trackIndex == trackId].index), 'trackIndex'] = -1
+                noise_problem = True
+                problem = problem + 'trackId: ' + str(trackId) + ' ' + 'total_hits<10 ' + '\n'
+                problem_count['total_hits<10'] = problem_count['total_hits<10'] + 1
+                continue
+
+
+
+            layer_count = track.value_counts('layer')
+            layer_index = list(layer_count.index)
+            layer_index.sort()
+            max_gap = 1
+            for id in range(len(layer_index) - 1):
+                gap = layer_index[id + 1] - layer_index[id]
+                if gap > 5:
+                    max_gap = gap
+                    break
+            if (max_gap > 5):
+                event_process = event_process.drop(event_process[event_process.trackIndex == trackId].index)
+                drop_problem = True
+                problem = problem + 'trackId: ' + str(trackId) + ' ' + 'gap_layer>5 ' + '\n'
+                problem_count['gap_layer>5'] = problem_count['gap_layer>5'] + 1
+                continue
+
+
+            cross_layer = len(layer_index)
+            if (cross_layer < 8):
+                event_process.loc[(event_process[event_process.trackIndex == trackId].index), 'trackIndex'] = -1
+                noise_problem = True
+                problem = problem + 'trackId: ' + str(trackId) + ' ' + 'cross_layer<8' + '\n'
+                problem_count['cross_layer<8'] = problem_count['cross_layer<8'] + 1
+                continue
+            '''
+            pid_count = track.value_counts('currentTrackPID')
+            if (len(pid_count) > 1):
+                for idx, count in pid_count.iteritems():
+                    if (count < 10):
+                        noise_problem = True
+                        event_process.loc[event_process[(event_process.trackIndex == trackId) & (
+                                event_process.currentTrackPID == idx)].index, 'trackIndex'] = -1
+            if (noise_problem):
+                problem = problem + 'trackId: ' + str(trackId) + ' ' + 'pid_noise ' + '\n'
+                problem_count['pid_noise'] = problem_count['pid_noise'] + 1
+            creator_count_2 = pid_count[pid_count >= 10]
+
+            if (len(creator_count_2) > 1):
+                drop_problem = True
+                #event_process = event_process.drop(event_process[event_process.event == event_id].index)
+                problem = problem + 'trackId: ' + str(trackId) + ' ' + 'pid_drop ' + '\n'
+                problem_count['pid_drop'] = problem_count['pid_drop'] + 1
+            '''
+
+            creator_count = track.value_counts('creatorProcessturnID')
+            # pid_max_part = pid_count.max() / pid_count.sum()
+            #if (creator_count.idxmax() != 'Decay'):
+            #    event_process = event_process.drop(event_process[event_process.trackIndex == trackId].index)
+            #    drop_problem = True
+            #    problem = problem + 'trackId: ' + str(trackId) + ' ' + 'creator_drop ' + '\n'
+            #    problem_count['creator_drop'] = problem_count['creator_drop'] + 1
+            #    continue
+            if (len(creator_count) > 1):
+                for idx, count in creator_count.iteritems():
+                    if (count < 10):
+                        noise_problem = True
+                        event_process.loc[event_process[(event_process.trackIndex == trackId) & (
+                                    event_process.creatorProcessturnID == idx)].index, 'trackIndex'] = -1
+            if (noise_problem):
+                problem = problem + 'trackId: ' + str(trackId) + ' ' + 'creator_noise ' + '\n'
+                problem_count['creator_noise'] = problem_count['creator_noise'] + 1
+
+            creator_count_2 = creator_count[creator_count >= 10]
+            if (len(creator_count_2) > 0 ):
+                drop_index = event_process[(event_process.trackIndex == trackId) & (event_process.isScondary != 0)].index
+                if ((len(drop_index)<(track.shape[0]-10)) and len(drop_index)>0):
+                    drop_problem = True
+                    event_process.loc[drop_index, 'trackIndex'] = -1
+                    problem = problem + 'trackId: ' + str(trackId) + ' ' + 'creator_noise ' + '\n'
+                    problem_count['creator_noise'] = problem_count['creator_noise'] + 1
+                elif(len(drop_index)>(track.shape[0]-10)):
+                    drop_problem = True
+                    event_process = event_process.drop(drop_index)
+                    problem = problem + 'trackId: ' + str(trackId) + ' ' + 'creator_drop ' + '\n'
+                    problem_count['creator_drop'] = problem_count['creator_drop'] + 1
+
+            #elif(len(creator_count_2) == 1):
+            #    drop_index = event_process[(event_process.trackIndex ==trackId) & (event_process.isScondary ==1)].index
+            #    if (len(drop_index) != track.shape[0]):
+            #        #print('isSecondary:', event_id, trackId)
+            #        drop_problem = True
+            #        event_process = event_process.drop(drop_index)
+            #        problem = problem + 'trackId: ' + str(trackId) + ' ' + 'creator_drop ' + '\n'
+            #        problem_count['creator_drop'] = problem_count['creator_drop'] + 1
+
+
+        clean_data = clean_data.sort_value(by = 'gid')
+        if (drop_problem):
+            problem_event = event_process
+            problem_event['problem'] = problem
+            problem_data = pd.concat([problem_data, event_process])
+
+        clean_data = pd.concat([clean_data, event_process])
+
+    #print(problem_count)
+    return clean_data, problem_data
+
+def process_file(rawData_dir, fname, out_dir, wirePos_file, args):
     # load wire position and calculate (phi, r) from (x, y)
-    wirePos = load_wirePos(wirePos_file)
-    rawData = pd.read_csv(data_file)
+    data_file = os.path.join(rawData_dir, fname)
+    #wirePos = load_wirePos(wirePos_file)
+    #rawData = pd.read_csv(data_file)
 
 
-    hits = allocate_wirePos(wirePos, rawData) 
-    hits = clean_data(hits, args)
+    #hits = allocate_wirePos(wirePos, rawData) 
+    #clean_data , problem_data = clean_data(hits, args)
+
+    #clean_data = clean_data.sort_values(by='event')
+    #problem_data = problem_data.sort_values(by='event')
+    
+    clean_out_file = fname[:fname.find('.csv')] + '_cleaned' + fname[fname.find('.csv'):]
+    problem_out_file = fname[:fname.find('.csv')] + '_problem' + fname[fname.find('.csv'):]
+    #clean_data.to_csv(output_file, index=False)
+    #problem_data.to_csv(problem_file, index=False)
+    
+
 
 
 def main():
@@ -67,12 +212,12 @@ def main():
 
     rawData_dir = "./data/rawData/rhoPi"
     out_dir = "./data/processedData/rhoPi"
-    wirePos_file = "MdcWirePosition.csv"
+    wirePos_file = "./data/preprocess/MdcWirePosition.csv"
 
     for fname in os.listdir(rawData_dir):
         if fname.endswith(".csv"):
             print("Processing file: " + fname)
-            process_file (os.path.join(rawData_dir, fname), out_dir, wirePos_file, args)
+            process_file (rawData_dir, fname, out_dir, wirePos_file, args)
 
 if __name__ == '__main__':
     main()
