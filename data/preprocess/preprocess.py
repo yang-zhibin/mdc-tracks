@@ -2,6 +2,7 @@ import os
 import argparse
 import pandas as pd
 import math
+import time
 
 def cal_phi(x, y):
     phi = math.atan2(y, x)
@@ -180,27 +181,34 @@ def clean_data(hits, args):
 
         clean_data = pd.concat([clean_data, event_process])
 
-    #print(problem_count)
+    print(problem_count)
     return clean_data, problem_data
 
 def process_file(rawData_dir, fname, out_dir, wirePos_file, args):
     # load wire position and calculate (phi, r) from (x, y)
+    t0 = time.time()
     data_file = os.path.join(rawData_dir, fname)
-    #wirePos = load_wirePos(wirePos_file)
-    #rawData = pd.read_csv(data_file)
 
+    wirePos = load_wirePos(wirePos_file)
+    rawData = pd.read_csv(data_file)
 
-    #hits = allocate_wirePos(wirePos, rawData) 
-    #clean_data , problem_data = clean_data(hits, args)
+    print("Processing #%d hits in %s." % (len(rawData), fname))
 
+    t1 = time.time()
+    hits = allocate_wirePos(wirePos, rawData) 
+    t2 = time.time()
+    clean_data , problem_data = clean_data(hits, args)
+    t3 = time.time()
     #clean_data = clean_data.sort_values(by='event')
     #problem_data = problem_data.sort_values(by='event')
     
-    clean_out_file = fname[:fname.find('.csv')] + '_cleaned' + fname[fname.find('.csv'):]
-    problem_out_file = fname[:fname.find('.csv')] + '_problem' + fname[fname.find('.csv'):]
+    clean_out_file = os.path.join(out_dir, fname[:fname.find('.csv')] + '_cleaned' + fname[fname.find('.csv'):])
+    problem_out_file = os.path.join(out_dir, fname[:fname.find('.csv')] + '_problem' + fname[fname.find('.csv'):])
     #clean_data.to_csv(output_file, index=False)
     #problem_data.to_csv(problem_file, index=False)
-    
+
+    t4 = time.time()
+    print("Total time used: %d seconds, allocated wire position in %d seconds, cleaned data in %d seconds" % (t4- t0, t2-t1, t3-t3))
 
 
 
