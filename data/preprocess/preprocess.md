@@ -1,4 +1,4 @@
-# preprocess discription
+# preprocess description
 
 There are two main function for preprocess, allocate wire position and cleaning.
 
