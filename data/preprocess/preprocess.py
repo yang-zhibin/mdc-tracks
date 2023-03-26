@@ -24,6 +24,7 @@ def load_wirePos(wirePos_file):
     wirePos['phi'] = phi
     wirePos['r'] = r
 
+    wirePos = wirePos.drop(columns=['layer', 'cell'])
     wirePos = wirePos.rename(columns={'id':'gid'})
     return wirePos
 
@@ -48,17 +49,19 @@ def allocate_wirePos(wirePos, rawData):
 
     return hits
 
-def clean_data(hits, args):
-    data_grouped = hits.groupby('event')
+def clean_data(rawData, wirePos, args, clean_out_file, problem_out_file):
+    
+    data_grouped = rawData.groupby('event')
 
     problem_count = pd.Series(
         {'total': 0,'total_hits<10': 0, 'pid_max_part<0.9': 0, 'gap_layer>5': 0, 'min_layer>8': 0, 'cross_layer<8': 0,
          'creator_noise': 0, 'creator_drop': 0, 'center_drop':0})
-    clean_data = pd.DataFrame(columns=list(hits))
-    problem_data = pd.DataFrame(columns=list(hits))
-    problem_data['problem'] = 0
-
+    #clean_data = pd.DataFrame(columns=list(hits))
+    #problem_data = pd.DataFrame(columns=list(hits))
+    #problem_data['problem'] = 0
+    count = 0
     for event_id, event in data_grouped:
+        event = allocate_wirePos(wirePos, event)
         track_grouped = event.groupby('trackIndex')
         noise_problem = False
         drop_problem = False
@@ -173,16 +176,33 @@ def clean_data(hits, args):
             #        problem_count['creator_drop'] = problem_count['creator_drop'] + 1
 
 
-        clean_data = clean_data.sort_value(by = 'gid')
-        if (drop_problem):
-            problem_event = event_process
-            problem_event['problem'] = problem
-            problem_data = pd.concat([problem_data, event_process])
-
-        clean_data = pd.concat([clean_data, event_process])
-
+        #clean_data = clean_data.sort_value(by = 'gid')
+        event_process = event_process.sort_values(by='gid')
+        if (count==0):
+            if (drop_problem):
+                problem_event = event_process
+                problem_event['problem'] = problem
+                problem_event.to_csv(problem_out_file)
+                #problem_data = pd.concat([problem_data, event_process])
+            else:
+                event_process.to_csv(clean_out_file)
+        else:
+            if (drop_problem):
+                problem_event = event_process
+                problem_event['problem'] = problem
+                problem_event.to_csv(problem_out_file, mode='a', header=False)
+                #problem_data = pd.concat([problem_data, event_process])
+            else:
+                event_process.to_csv(clean_out_file, mode='a',header=False)
+        #clean_data = pd.concat([clean_data, event_process])
+        
+        count=count+1
+        print(event_id, 'processed')
+        if(count>args.event_max):
+            break   
     print(problem_count)
-    return clean_data, problem_data
+    
+    return 
 
 def process_file(rawData_dir, fname, out_dir, wirePos_file, args):
     # load wire position and calculate (phi, r) from (x, y)
@@ -190,20 +210,22 @@ def process_file(rawData_dir, fname, out_dir, wirePos_file, args):
     data_file = os.path.join(rawData_dir, fname)
 
     wirePos = load_wirePos(wirePos_file)
-    rawData = pd.read_csv(data_file)
+    rawData = pd.read_csv(data_file, index_col=False, nrows=1000000)
+    
+    clean_out_file = os.path.join(out_dir, fname[:fname.find('.csv')] + '_cleaned' + fname[fname.find('.csv'):])
+    problem_out_file = os.path.join(out_dir, fname[:fname.find('.csv')] + '_problem' + fname[fname.find('.csv'):])
 
     print("Processing #%d hits in %s." % (len(rawData), fname))
 
     t1 = time.time()
-    hits = allocate_wirePos(wirePos, rawData) 
+    #hits = allocate_wirePos(wirePos, rawData) 
     t2 = time.time()
-    clean_data , problem_data = clean_data(hits, args)
+    clean_data(rawData, wirePos, args, clean_out_file, problem_out_file)
     t3 = time.time()
     #clean_data = clean_data.sort_values(by='event')
     #problem_data = problem_data.sort_values(by='event')
     
-    clean_out_file = os.path.join(out_dir, fname[:fname.find('.csv')] + '_cleaned' + fname[fname.find('.csv'):])
-    problem_out_file = os.path.join(out_dir, fname[:fname.find('.csv')] + '_problem' + fname[fname.find('.csv'):])
+    
     #clean_data.to_csv(output_file, index=False)
     #problem_data.to_csv(problem_file, index=False)
 
@@ -215,13 +237,16 @@ def process_file(rawData_dir, fname, out_dir, wirePos_file, args):
 def main():
     parser = argparse.ArgumentParser(description = 'MDC data preprocess implementation')
     parser.add_argument('--rawDriftTime-max', type=float, default=1600)
+    parser.add_argument('--event-max', type=float, default=1000)
 
     args = parser.parse_args()
 
     rawData_dir = "./data/rawData/rhoPi"
     out_dir = "./data/processedData/rhoPi"
     wirePos_file = "./data/preprocess/MdcWirePosition.csv"
-
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+    
     for fname in os.listdir(rawData_dir):
         if fname.endswith(".csv"):
             print("Processing file: " + fname)
