@@ -185,6 +185,7 @@ def match_track(event):
 
     pre_base = pd.DataFrame(columns=['trackId_pred', 'match_gnd', 'total_hits', 'match_hits', 'purity'])
     gnd_base = pd.DataFrame(columns=['trackId_gnd', 'match_pred', 'total_hits', 'match_hits', 'eff'])
+    gnd_base_2 = pd.DataFrame(columns=['trackId_gnd', 'match_pred', 'total_hits', 'match_hits', 'eff'])
 
     for track_id, track in pre_grouped:
         gnd_count = track.value_counts('trackId_gnd')
@@ -195,6 +196,8 @@ def match_track(event):
             pre_base.loc[len(pre_base.index)] = [int(track_id), -1, gnd_count.sum(), 0, 0]
 
     pre_base_grouped = pre_base.groupby('match_gnd')
+
+
     for track_id, track in gnd_grouped:
         if (track_id in pre_base['match_gnd'].values):
             match_pre = pre_base_grouped.get_group(track_id)
@@ -207,6 +210,7 @@ def match_track(event):
 
             track_eff = match_hit / total_hit
 
+            gnd_base_2.loc[len(gnd_base.index)] = [int(track_id), pre_count.idxmax(), total_hit, match_hit, track_eff]
             if (track_eff>0.5):
                 gnd_base.loc[len(gnd_base.index)] = [int(track_id), pre_count.idxmax(), total_hit, match_hit, track_eff]
             else:
@@ -217,7 +221,7 @@ def match_track(event):
             gnd_base.loc[len(gnd_base.index)] = [int(track_id), -1, total_hit, 0, 0]
 
 
-    return gnd_base, pre_base
+    return gnd_base, pre_base, gnd_base_2
     print('test')
 
 def cal_d(cx, cy, r):
@@ -271,14 +275,15 @@ def display_data(data):
 
 
 
-def process(hit, track_gnd, track_pre):
+def process(hit, track_gnd, track_pre, input_dir):
     hit_grouped = hit.groupby('event')
     track_gnd_grouped = track_gnd.groupby('event')
     track_pre_grouped = track_pre.groupby('event')
 
     data = pd.DataFrame(columns=['event', 'd','d_truth', 'pt', 'pt_truth'])
+    eff_data = pd.DataFrame(columns = ['event', 'trackId_gnd', 'match_pred', 'total_hits', 'match_hits', 'eff'])
     for event_id, event in hit_grouped:
-        print(event_id)
+        #print(event_id)
         event_track_gnd = track_gnd_grouped.get_group(event_id)
         event_track_pre = track_pre_grouped.get_group(event_id)
         event_track_gnd = event_track_gnd.reset_index(drop=True)
@@ -289,7 +294,7 @@ def process(hit, track_gnd, track_pre):
         event_track_gnd = event_track_gnd.rename(columns={'index':'trackId_gnd'})
         event_track_pre = event_track_pre.rename(columns={'index':'match_pred'})
 
-        gnd_base, pre_base = match_track(event)
+        gnd_base, pre_base , gnd_base_2= match_track(event)
 
         #gnd_base = gnd_base.drop(gnd_base[gnd_base.match_pred == -1].index)
         #match_pre = gnd_base['match_pred'].values.astype(int).tolist()
@@ -299,12 +304,20 @@ def process(hit, track_gnd, track_pre):
         keys = ['cx', 'cy', 'r', 'charge','trackId_gnd']
         track_merge = event_track_gnd[keys].merge(match_pre[keys].reset_index(), on='trackId_gnd', suffixes=('_gnd', '_pre'))
 
+        eff = gnd_base_2.merge(event_track_gnd, on='trackId_gnd')
+        if (eff.shape[0]==0):
+            print(event_id, 'no track')
+            continue
+
+        pt_truth = eff.apply(lambda row: cal_pt(row['r'], row['charge']), axis=1)
+        eff['pt_truth'] = pt_truth
+
         track_merge = track_merge.drop(track_merge[track_merge.trackId_gnd == 0 ].index)
-        track_merge = track_merge.drop(track_merge[track_merge.r_pre < 0.06].index)
-        track_merge = track_merge.drop(track_merge[track_merge.r_gnd < 0.06].index)
+        #track_merge = track_merge.drop(track_merge[track_merge.r_pre < 0.06].index)
+        #track_merge = track_merge.drop(track_merge[track_merge.r_gnd < 0.06].index)
 
         if (track_merge.shape[0]==0):
-            print('no track')
+            print(event_id, 'no track')
             continue
 
         d = track_merge.apply(lambda row: cal_d(row['cx_pre'], row['cy_pre'], row['r_pre']), axis=1)
@@ -322,29 +335,34 @@ def process(hit, track_gnd, track_pre):
 
         data = pd.concat([data, event_data])
 
+
+
+        eff_data = pd.concat([eff_data, eff])
+
         #if (event_id>200):
         #    break
 
-    data.to_csv('match_track_data.csv')
+    data.to_csv(input_dir+'/match_track_data.csv')
+    eff_data.to_csv(input_dir+'/track_eff_data.csv')
     #display_data(data)
     #print('test')
 
 def main():
 
-    input_dir = 'E:\ihep\BESIII\hep_track\outputs'
-    hit_file = input_dir + '/'+'hits_prediction_val.csv'
-    track_gnd_file = input_dir + '/'+'param_gnd_val.csv'
-    track_pred_file = input_dir + '/'+'param_prediction_val.csv'
+    input_dir = './results/h2t_polar_distance_v2/prediction'
+    hit_file = input_dir + '/'+'hits_prediction_test.csv'
+    track_gnd_file = input_dir + '/'+'param_gnd_test.csv'
+    track_pred_file = input_dir + '/'+'param_prediction_test.csv'
 
     hit = pd.read_csv(hit_file, index_col=0)
     track_gnd = pd.read_csv(track_gnd_file, index_col=0)
     track_pre = pd.read_csv(track_pred_file, index_col=0)
 
-    data = pd.read_csv('match_track_data.csv')
-    display_data(data)
-    #process(hit, track_gnd, track_pre)
+    #data = pd.read_csv(input_dir+'/match_track_data.csv')
+    #display_data(data)
+    process(hit, track_gnd, track_pre, input_dir)
 
-
+ # wirete
 
 
 

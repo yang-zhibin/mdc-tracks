@@ -204,13 +204,13 @@ def draw_result(result,  pdf, n,circle_preds):
 
 def main():
 
-    input_dir = 'E:\ihep\BESIII\hep_track\output_2\h2t_polar\h2t_polar_v3'
-    file_name = '\hits_prediction_test_rc'
+    input_dir = './results/h2t_polar_distance_v1/prediction'
+    file_name = '/hits_prediction_test_rc'
 
     circle_preds_file = input_dir + '\param_prediction_test.csv'
 
     input_file = input_dir + file_name + '.csv'
-    output = 'hits_prediction_polar_v3.pdf'
+    output = input_dir+ '/hits_prediction_display.pdf'
 
 
     result = pd.read_csv(input_file)

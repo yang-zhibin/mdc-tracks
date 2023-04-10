@@ -11,15 +11,15 @@ def polar_to_rc(hits):
 
 def main():
 
-    input_dir = 'E:\ihep\BESIII\hep_track\output_2\h2t_polar\h2t_polar_v3'
+    input_dir = './results/h2t_polar_distance_v2/prediction'
     hit_file = input_dir + '\hits_prediction_test.csv'
     output = input_dir + '\hits_prediction_test_rc.csv'
 
     hits = pd.read_csv(hit_file)
     x, y = polar_to_rc(hits)
 
-    hits['x'] = y
-    hits['y'] = x
+    hits['x'] = x
+    hits['y'] = y
 
     hits.to_csv(output)
 

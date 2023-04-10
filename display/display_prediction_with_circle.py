@@ -88,7 +88,7 @@ def draw_result(hits,param_pred, param_gnd, pdf, draw_event):
 
 def main():
 
-    input_dir = 'E:\ihep\BESIII\hep_track\output_2\h2t_polar\h2t_polar_v3'
+    input_dir = './results/h2t_polar_distance_v2/prediction'
     hit_file = input_dir + '\hits_prediction_test_rc.csv'  #_rc = polar to rc
     param_pred_file = input_dir + '\param_prediction_test.csv'
     param_gnd_file = input_dir + '\param_gnd_test.csv'
@@ -98,10 +98,10 @@ def main():
     param_gnd = pd.read_csv(param_gnd_file)
 
 
-    output = 'hits_prediction_polar_v3_with_circles.pdf'
+    output = input_dir+'/prediction_with_circles_h2t_polar_distance.pdf'
 
 
-    draw_event = 200
+    draw_event = 100
 
     #val_count = result.value_counts('trackId_gnd')
     #ratio = val_count[0] / val_count.sum()

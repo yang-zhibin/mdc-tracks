@@ -131,7 +131,7 @@ def compare_train_loss(train_log):
     print()
 
 def main():
-    log_path = './results/h2t_v1_2/network.log'
+    log_path = './results/h2t_polar_distance_v2/network.log'
     output_pdf = log_path.replace('network.log', 'train_curves.pdf')
     train_csv = log_path.replace('network.log', 'train_log.csv')
     val_csv = log_path.replace('network.log', 'val_log.csv')

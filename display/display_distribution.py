@@ -168,7 +168,7 @@ def display_eff(eff, input_dir):
 
 
 def main():
-    input_dir = './results/h2t_polar_distance_v1/prediction'
+    input_dir = './results/h2t_polar_distance_v2/prediction'
     match_track_file = input_dir + '/match_track_data.csv'
     eff_file = input_dir + '/track_eff_data.csv'
     data = pd.read_csv(match_track_file)
