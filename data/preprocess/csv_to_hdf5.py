@@ -2,6 +2,7 @@ import pandas as pd
 import h5py
 import os
 import math
+import numpy as np
 
 def cal_phi(x, y):
     phi = math.atan2(y, x)
@@ -80,33 +81,37 @@ def process(out_dir, wirePos, mcPariticle, mdcDigiMc):
     mcPariticle_run = mcPariticle.groupby('run')
     mdcDigiMc_run = mdcDigiMc.groupby('run')
     
-    particleName = 'pipijpsi'
+    eventType = 'pipijpsi'
     eventCount = 0
     fileSize = 1000
-    fileNo = 0 
+    fileNo = 2
     
-    hit_feature_col = ['run', 'event',  'x', 'y', 'r', 'phi', 'rawDriftTime']
-    hit_label_col = [ 'run', 'event', 'trackIndex', 'driftDistance']
-    track_label_col = ['run','event','trackIndex', 'cx', 'cy', 'radius', 'charge']
+    hit_feature_col = ['x', 'y', 'r', 'phi', 'rawDriftTime']
+    hit_label_col = ['trackIndex', 'driftDistance']
+    track_label_col = ['trackIndex', 'cx', 'cy', 'radius', 'charge']
+    
+    event_info_col = [ 'event_type', 'run', 'event']
+    hit_info_col = ['gid']
+    track_info_col = ['particleProperty']
 
     out_file = out_dir + '/' + 'bes3data' + '_' + '%04d' % fileNo + '.hdf5'
     print('out_file: ' + out_file)
     f = h5py.File(out_file, 'w')
-    group_paeticle = f.create_group(particleName)
+    #group_paeticle = f.create_group(eventType)
     
     for runId, run in mdcDigiMc_run:
         print('runId: ' + str(runId))
         mdcDigiMc_event = run.groupby('event')
         mcPariticle_event = mcPariticle_run.get_group(runId).groupby('event')
         
-        group_run = group_paeticle.create_group('run'+str(runId))
+        #group_run = group_paeticle.create_group('run'+str(runId))
         
         #group_run.create_dataset('hit_feature', shape=[0,0,4],max)
                 
         for eventId, event in mdcDigiMc_event:
             print('eventId: ' + str(int(eventId)))
             
-            group_event =group_run.create_group('event'+'%06d' % eventId)
+            group_event =f.create_group('event_'+'%06d'%eventCount)
             # group_event =group_run[str(eventId+1e5)] = eventId
             
             event = allocate_wirePos(wirePos, event)
@@ -119,9 +124,21 @@ def process(out_dir, wirePos, mcPariticle, mdcDigiMc):
             hit_label = event[hit_label_col]
             track_label = mcPariticle_track[track_label_col]
             
+            hit_info = event[hit_info_col]
+            track_info = mcPariticle_track[track_info_col]
+            
+            event_info_dtype =np.dtype({'names': event_info_col, 'formats': ['S10','i4', 'i4']})
+            
+            event_info = np.array([(eventType, runId, eventId)], dtype=event_info_dtype)
+            
+            
             group_event.create_dataset('hit_feature', data=hit_feature.to_records(index=False))
             group_event.create_dataset('hit_label', data=hit_label.to_records(index=False))
             group_event.create_dataset('track_label', data=track_label.to_records(index=False))
+            group_event.create_dataset('hit_info', data=hit_info.to_records(index=False))
+            group_event.create_dataset('track_info', data=track_info.to_records(index=False))
+            group_event.create_dataset('event_info', data=event_info)
+            
             
             eventCount += 1
             #if eventCount >100:
