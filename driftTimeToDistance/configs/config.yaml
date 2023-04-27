@@ -1,0 +1,9 @@
+dataset:
+  val_path: D:\ihep\mdc-tracks\driftTimeToDistance\data\drift_data.csv
+  train_path: D:\ihep\mdc-tracks\driftTimeToDistance\data\fit_drift_data.csv
+
+train:
+  epochs: 200
+  batch_size: 2
+  lr: 0.01
+  val_interval: 10
