@@ -1,22 +1,27 @@
 import torch
 import pandas as pd
 import numpy as np
+import h5py
 
 # generate a pytorch dataset class
 
-class Dataset(torch.utils.data.Dataset):
-    def __init__(self, hdf5_file, key, transform=None):
-        self.hdf5_file = hdf5_file
-        self.key = key
-        self.transform = transform
-        self.data = pd.read_hdf(self.hdf5_file, self.key)
-        self.data = self.data.values
-        self.data = self.data.astype(np.float32)    
+class MdcTrackDataset(torch.utils.data.Dataset):
+    def __init__(self, file_path):
+        self.file_path = file_path
+        self.event_ids = []
+        self.event_data = []
+        
+        with h5py.File(self.file_path, 'r') as file:
+            for event_id in file.keys():
+                self.event_ids.append(event_id)
+                self.event_data.append(file[event_id])
+
     def __len__(self):
-        return len(self.data)
+        return len(self.event_ids)
+
     def __getitem__(self, idx):
-        sample = self.data[idx]
-        if self.transform:
-            sample = self.transform(sample)
-        return sample
-# Path: graph_models\dataset.py 
+        event = self.event_data[idx]
+        hit_feature = torch.Tensor(event['hit_feature'][()])
+        hit_label = torch.Tensor(event['hit_label'][()])
+        track_label = torch.Tensor(event['track_label'][()])
+        return hit_feature, hit_label, track_label

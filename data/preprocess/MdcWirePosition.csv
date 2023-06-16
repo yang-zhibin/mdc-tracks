@@ -1,4 +1,4 @@
-id,layer,cell,east_x,east_y,east_z,west_x,west_y,west_z,stereo
+gid,layer,cell,east_x,east_y,east_z,west_x,west_y,west_z,stereo
 0,0,0,7.86069,0.61865,39,7.02559,-3.57972,-39,1
 1,0,1,7.66714,1.84072,39,7.49908,-2.4366,-39,1
 2,0,2,7.28479,3.01746,39,7.78792,-1.23349,-39,1

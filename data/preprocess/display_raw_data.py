@@ -29,6 +29,22 @@ def load_wirePos(wirePos_file):
 
     wirePos = wirePos.drop(columns=['layer', 'cell'])
     return wirePos
+
+def charge_from_PID(pid):
+    if pid == 11:
+        return -1
+    elif pid == -11:
+        return 1
+    elif pid == 13:
+        return -1   
+    elif pid == -13:    
+        return 1
+    elif pid < 0:
+        return -1
+    elif pid > 0:
+        return 1
+
+
 def load_mcParticle(mcParticle_file):
     print("mcParticle file: " + mcParticle_file)
     mcParticle = pd.read_csv(mcParticle_file, index_col=False)
@@ -38,9 +54,9 @@ def load_mcParticle(mcParticle_file):
     mcParticle.loc[:, 'radius'] = mcParticle.apply(lambda row: row['pt']*333.564, axis=1)
 
     
-    mcParticle.loc[:, 'charge'] = mcParticle['particleProperty'].apply(lambda x: -1 if x < 0 else 1)
+    mcParticle.loc[:, 'charge'] = mcParticle['particleProperty'].apply(lambda x: charge_from_PID(x))
     
-    mcParticle.loc[:, 'angle'] = mcParticle.apply(lambda row: math.atan2(-row['initialFourMomentumx'], row['initialFourMomentumy']), axis=1)
+    mcParticle.loc[:, 'angle'] = mcParticle.apply(lambda row: math.atan2(row['initialFourMomentumx'], -row['initialFourMomentumy']), axis=1)
     
     mcParticle.loc[:, 'cx'] = mcParticle.apply(lambda row: row['initialPositionx'] + row['charge']*row['radius']*math.cos(row['angle']), axis=1)
     mcParticle.loc[:, 'cy'] = mcParticle.apply(lambda row: row['initialPositiony'] + row['charge']*row['radius']*math.sin(row['angle']), axis=1)
@@ -51,6 +67,9 @@ def allocate_wirePos(wirePos, rawData):
     # fix track index bug from raw data
     rawData['trackIndex'] = rawData['trackIndex'].apply(lambda x: x-1000 if x >= 1000 else x)
     rawData['trackIndex'] = rawData['trackIndex'].apply(lambda x: -1 if x < 0 else x)
+    
+    
+    rawData['currentTrackPID'] = rawData['currentTrackPID'].apply(lambda x: 0 if x==-9999 else x)
 
     #allocate wire position through gid
     hits = pd.merge(rawData, wirePos, on='gid')
@@ -74,6 +93,7 @@ def drawRawEvents(data, wirePos, mcParticle, pdf, n):
     for event_id, event in data_grouped:
         event = allocate_wirePos(wirePos, event)
         Particle = mcParticle_grouped.get_group(event_id)
+        event = event.drop(event[event.trackIndex == -1].index)
         #Particle = Particle.groupby('trackIndex')
         #event = event.drop(event[event.currentTrackPID ==-9999].index)
         
@@ -90,14 +110,18 @@ def drawRawEvents(data, wirePos, mcParticle, pdf, n):
         axs1.set_aspect(1)
         sc1 = axs1.scatter(event['x'], event['y'], marker='o', c=event['trackIndex'], cmap=plt.cm.tab20b, alpha=0.7, label=event['trackIndex'])
         plt.colorbar(sc1, fraction=0.05)
-
+        trackIdCount = event.value_counts('trackIndex')
+        
         for trackid, track in Particle.iterrows():
-            if(track['trackIndex'] in [8,9]):
+            #if(track['trackIndex'] in [7,8,9, 10]):
+            if(track['trackIndex'] in trackIdCount.index.tolist()):
                 if (track['charge']>0):
                     trackColor = 'skyblue'
+                    hatch = '/'
                 else:
                     trackColor = 'pink'
-                circle = Circle((track['cx'], track['cy']), track['radius'], color = trackColor, fill=False, alpha=0.8, linewidth=3)
+                    hatch = '\\'
+                circle = Circle((track['cx'], track['cy']), track['radius'], color = trackColor, fill=False, alpha=0.8, linewidth=3, hatch=hatch)
                 axs1.add_patch(circle)
             
             
@@ -130,7 +154,7 @@ if __name__ == '__main__':
     mcParticle = load_mcParticle(mcParticle_file)
     #raw_data = pd.read_csv(raw_data_file, nrows=rows)
     
-    n=10
+    n=100
 
     with PdfPages(output) as pdf:
         drawRawEvents(data, wirePos, mcParticle, pdf, n)

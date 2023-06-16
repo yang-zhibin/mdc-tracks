@@ -14,8 +14,6 @@ class DriftDistanceRegression(torch.nn.Module):
         self.fc3 = torch.nn.Linear(128, 64)
         self.fc4 = torch.nn.Linear(64, 1)
           
-        
-
 
     def forward(self, x):
         out = F.relu(self.fc1(x))
@@ -43,3 +41,4 @@ class PolynomialRegression(torch.nn.Module):
         y_pred = self.linear(y_pred)
         
         return y_pred
+    

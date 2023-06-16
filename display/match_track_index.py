@@ -349,7 +349,7 @@ def process(hit, track_gnd, track_pre, input_dir):
 
 def main():
 
-    input_dir = './results/h2t_polar_distance_v2/prediction'
+    input_dir = './results/h2t_baseline_gid/predictions'
     hit_file = input_dir + '/'+'hits_prediction_test.csv'
     track_gnd_file = input_dir + '/'+'param_gnd_test.csv'
     track_pred_file = input_dir + '/'+'param_prediction_test.csv'

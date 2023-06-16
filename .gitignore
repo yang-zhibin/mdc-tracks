@@ -1,1 +1,5 @@
 *.csv
+*.hdf5
+*.zip
+results/
+data/

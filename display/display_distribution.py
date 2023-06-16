@@ -5,6 +5,83 @@ import numpy as np
 import seaborn as sns
 from matplotlib.backends.backend_pdf import PdfPages
 from scipy import stats
+from scipy.optimize import curve_fit
+
+def gaussian(x, amplitude, mean, stddev):
+    return amplitude * np.exp(-((x - mean) / 4 / stddev)**2)
+
+def cal_reslution(data, input_dir):
+    
+    data['d'] *= 100
+    data['d_truth'] *= 100
+    
+    data['dd'] = data['d'] - data['d_truth']
+    data['dpt'] = data['pt'] - data['pt_truth']
+    
+    fig = plt.figure(figsize=(10, 4))
+    d = pd.DataFrame(columns=['d0', 'type'])
+    d_truth = pd.DataFrame(columns=['d0', 'type'])
+    d['d0'] = data['d'] 
+    d['type'] = 'd0_pre'
+    d_truth['d0'] = data['d_truth'] 
+    d_truth['type'] = 'd0_truth'
+    d0 = pd.concat([d, d_truth], ignore_index=True)
+    
+    axs1 = fig.add_subplot(121)
+    axs1 = sns.histplot(data=d0, x='d0', hue='type')
+    axs1.set(xlabel = 'd0 (cm)', xlim=[-40,40])
+    
+    axs3 = fig.add_subplot(122)
+    axs3 = sns.histplot(data['dd'],  stat='density', bins=250)
+    axs3.set(xlabel='Δd0 (cm)', xlim=[-100,100])
+    
+    hist, bin_edges = np.histogram(data['dd'], bins= 1000, density=True)
+    
+    bins = bin_edges[:-1]
+    popt, _ = curve_fit(gaussian, bins, hist)
+    amplitude, mean, stddev = popt
+    #axs3 = plt.plot(bins, hist)
+    axs3 = plt.plot(bins, gaussian(bins, amplitude, mean, stddev),color='r')
+    
+    title = "Δd0 distribution σ = %s μ = %s (total count:%s)"%(round(stddev, 3),round(mean,3), data.shape[0])
+    plt.title(title)
+    
+    plt.savefig(input_dir+'/distance_v2_2.png')
+    plt.close(fig)
+    
+    ### pt
+    
+    pt= pd.DataFrame(columns=['pt', 'type'])
+    pt_truth = pd.DataFrame(columns=['pt', 'type'])
+
+    pt['pt'] = data['pt']
+    pt['type'] = 'pt_pre'
+    pt_truth['pt'] = data['pt_truth']
+    pt_truth['type'] = 'pt_truth'
+    pt = pd.concat([pt, pt_truth], ignore_index=True)
+
+    fig = plt.figure(figsize=(10, 4))
+    axs1 = fig.add_subplot(121)
+    axs1 = sns.histplot(data=pt, x='pt', hue='type')
+    axs1.set(xlabel='pt (GeV)')
+
+    axs3 = fig.add_subplot(122)
+    axs3 = sns.histplot(data['dpt']*1000, stat='density',bins=150)
+    axs3.set(xlabel='Δpt (MeV)',xlim=[-500,500])
+    
+    hist, bin_edges = np.histogram(data['dpt']*1000, bins= 1000, density=True)
+    
+    bins = bin_edges[:-1]
+    popt, _ = curve_fit(gaussian, bins, hist)
+    amplitude, mean, stddev = popt
+    #axs3 = plt.plot(bins, hist)
+    axs3 = plt.plot(bins, gaussian(bins, amplitude, mean, stddev),color='r')
+    title = "pt distribution σ = %s μ = %s(total count:%s)"%(round(stddev, 3),round(mean,3), data.shape[0])
+    plt.title(title)
+
+    plt.savefig(input_dir+'/pt_v2_2.png')
+    plt.close(fig)
+    
 
 def display_data(data, input_dir):
     fig = plt.figure(figsize=(10, 4))
@@ -168,15 +245,18 @@ def display_eff(eff, input_dir):
 
 
 def main():
-    input_dir = './results/h2t_polar_distance_v2/prediction'
+    input_dir = './results/h2t_baseline_gid/predictions'
     match_track_file = input_dir + '/match_track_data.csv'
     eff_file = input_dir + '/track_eff_data.csv'
     data = pd.read_csv(match_track_file)
     eff_data = pd.read_csv(eff_file)
     eff_data = eff_data.drop(eff_data[eff_data.trackId_gnd == 0].index)
 
-    display_data(data, input_dir)
-    display_eff(eff_data, input_dir)
+    #display_data(data, input_dir)
+    #display_eff(eff_data, input_dir)
+    
+    cal_reslution(data, input_dir)
+    
 
 if __name__ == '__main__':
     main()

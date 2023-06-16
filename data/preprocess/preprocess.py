@@ -238,6 +238,7 @@ def main():
     parser = argparse.ArgumentParser(description = 'MDC data preprocess implementation')
     parser.add_argument('--rawDriftTime-max', type=float, default=1600)
     parser.add_argument('--event-max', type=float, default=1000)
+    parser.add_argument('--stay-raw', type=bool, default=False)
 
     args = parser.parse_args()
 

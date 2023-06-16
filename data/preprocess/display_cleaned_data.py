@@ -103,9 +103,9 @@ def drawCleanEvents(data, pdf, n):
 
 if __name__ == '__main__':
 
-    input_file = "./data/processedData/rhoPi/mdcDigiMc_1_0_cleaned.csv"
+    input_file = "./data/rawData/pipijpsi/pipijpsi_mdcDigiMc_0.csv"
 
-    output = './data/processedData/rhoPi/display_mdcDigiMc_1_0_cleaned_data.pdf'
+    output = './data/processedData/rhoPi/display_pipijpsi_raw_data.pdf'
 
     #raw_data_file = "D:\ihep\mdc-tracks\data\rawData\rhoPi\mdcDigiMc_1_0.csv"
     
@@ -126,3 +126,4 @@ if __name__ == '__main__':
     with PdfPages(output) as pdf:
         drawCleanEvents(data,  pdf, n)
         print('Save to pdf file', pdf)
+        

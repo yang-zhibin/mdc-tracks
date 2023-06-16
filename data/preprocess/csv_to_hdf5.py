@@ -84,7 +84,7 @@ def process(out_dir, wirePos, mcPariticle, mdcDigiMc):
     eventType = 'pipijpsi'
     eventCount = 0
     fileSize = 1000
-    fileNo = 2
+    fileNo = 3
     
     hit_feature_col = ['x', 'y', 'r', 'phi', 'rawDriftTime']
     hit_label_col = ['trackIndex', 'driftDistance']
@@ -131,7 +131,6 @@ def process(out_dir, wirePos, mcPariticle, mdcDigiMc):
             
             event_info = np.array([(eventType, runId, eventId)], dtype=event_info_dtype)
             
-            
             group_event.create_dataset('hit_feature', data=hit_feature.to_records(index=False))
             group_event.create_dataset('hit_label', data=hit_label.to_records(index=False))
             group_event.create_dataset('track_label', data=track_label.to_records(index=False))
@@ -141,8 +140,8 @@ def process(out_dir, wirePos, mcPariticle, mdcDigiMc):
             
             
             eventCount += 1
-            #if eventCount >100:
-            #   break
+            if eventCount >100:
+               break
             
 
 def main():
