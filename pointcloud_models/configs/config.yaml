@@ -1,2 +1,11 @@
 dataset:
-  root_path: D:\ihep\mdc-tracks\data\HDF5\pipijpsi\bes3data_0001.hdf5
+  train_path: D:\ihep\mdc-tracks\data\HDF5\single_anti-p-_0001.hdf5
+  val_path: D:\ihep\mdc-tracks\data\HDF5\single_anti-p-_0001.hdf5
+  test_path: D:\ihep\mdc-tracks\data\HDF5\single_anti-p-_0001.hdf5
+  #D:\ihep\mdc-tracks\data\HDF5\single_anti-p-_0001.hdf5
+#D:\ihep\mdc-tracks\data\HDF5\pipijpsi\bes3data_0001.hdf5
+train:
+  epochs: 200
+  batch_size: 8
+  lr: 0.01
+  val_interval: 10

@@ -12,7 +12,6 @@ class MdcTrackDataset(torch.utils.data.Dataset):
         self.hit_label = []
         self.track_label = []
         
-        count = 0 
         with h5py.File(self.file_path, 'r') as file:
             for event_id in file.keys():
                 event_data = file[event_id]
@@ -23,9 +22,6 @@ class MdcTrackDataset(torch.utils.data.Dataset):
                 self.hit_feature.append( event_data['hit_feature'][:])
                 self.hit_label.append( event_data['hit_label'][:])
                 self.track_label.append(event_data['track_label'][:])
-                count +=1
-                if count>100:
-                    break
                 
             
     def __len__(self):
@@ -43,6 +39,11 @@ class MdcTrackDataset(torch.utils.data.Dataset):
         hit_label[:len(label)] = label
         
         track_label = np.array(self.track_label[idx].tolist())
+        
+        
+        exp_key = self.event_ids[idx]
+        trackid = self.track_label[idx]['trackid']
+        
         
         
         
