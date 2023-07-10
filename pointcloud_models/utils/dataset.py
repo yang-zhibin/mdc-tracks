@@ -24,7 +24,7 @@ class MdcTrackDataset(torch.utils.data.Dataset):
                 self.hit_label.append( event_data['hit_label'][:])
                 self.track_label.append(event_data['track_label'][:])
                 count +=1
-                if count>100:
+                if count>1000:
                     break
                 
             
