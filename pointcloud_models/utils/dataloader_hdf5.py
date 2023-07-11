@@ -4,6 +4,19 @@ import pandas as pd
 import numpy as np
 
 class MdcTrackDataset(torch.utils.data.Dataset):
+    ''' hdf5 dataset for MDC tracking
+    data are store event by event in hdf5 file, format is as follows:
+
+    event_info = [event_type, run_id, event_id]
+    hit_info = [gid]
+    track_info = [particleProperty]
+
+    hit_feature = [x, y, r, phi, rawDriftTime,rawDriftDistance] (unit[cm, cm, cm, rad, ns, cm])
+    
+    hit_label = [trackIndex, driftDistance] 
+    track_label = [trackIndex, cx, cy, radius, charge] (unit[ , cm, cm, cm, ])
+    '''
+
     def __init__(self, file_path):
         self.nmax_hits = 2048
         self.file_path = file_path
@@ -17,15 +30,12 @@ class MdcTrackDataset(torch.utils.data.Dataset):
                 event_data = file[event_id]
                 
                 self.event_ids.append(event_id)
-                
-                #print(event_data['hit_feature'][:])
                 self.hit_feature.append( event_data['hit_feature'][:])
                 self.hit_label.append( event_data['hit_label'][:])
                 self.track_label.append(event_data['track_label'][:])
                 
             
     def __len__(self):
-        #print(len(self.event_ids))
         return len(self.event_ids)
 
     def __getitem__(self, idx):
@@ -33,6 +43,30 @@ class MdcTrackDataset(torch.utils.data.Dataset):
         hit_feature = np.zeros((self.nmax_hits, 3), dtype=np.float32)
         hit_label = np.zeros((self.nmax_hits, 2), dtype=np.float32)
         
+        
+        x = self.hit_feature[idx][:,0]
+        y = self.hit_feature[idx][:,1]
+        r = self.hit_feature[idx][:,2]
+        phi = self.hit_feature[idx][:,3]
+        rawDriftTime = self.hit_feature[idx][:,4]
+        rawDriftDistance = self.hit_feature[idx][:,5]
+
+        hit_feature[:,0] = r
+        hit_feature[:,1] = phi
+        hit_feature[:,2] = rawDriftDistance
+
+        trackid = self.hit_label[idx][:,0]
+        driftDistance = self.hit_label[idx][:,1]
+
+        hit_label[:,0] = trackid
+        hit_label[:,1] = driftDistance
+
+        track_label = self.track_label[idx]
+        
+
+
+
+
         feature = np.array(self.hit_feature[idx].tolist())
         label = np.array(self.hit_label[idx].tolist())
         hit_feature[:len(feature)] = feature[:,2:]
